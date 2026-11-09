@@ -36,11 +36,15 @@ S: S Assgn {}
  ;
 
 Assgn: ID '=' A ';' {
+        char *newlabel = genlabel(); 
+
         printf("%s: %s = %s\n",
-        genlabel(), $1, $3);
+        newlabel, $1, $3);
         free($1);
         free($3);
         printf("\n---------------------\n");
+        
+        free(newlabel);
      }
     ;
 
@@ -54,17 +58,17 @@ A: A '+' A { emit_assignment($1, "+", $3); $$ = strdup(temp_buf); }
 
 | '(' A ')' { $$ = $2; }
 
-| A GT A { emit_assignment($1, ">", $3); $$ = strdup(temp_buf); }
+| A GT A { emit_relational($1, ">", $3); $$ = strdup(temp_buf); }
 
-| A LT A { emit_assignment($1, "<", $3); $$ = strdup(temp_buf); }
+| A LT A { emit_relational($1, "<", $3); $$ = strdup(temp_buf); }
 
-| A LE A { emit_assignment($1, "<=", $3); $$ = strdup(temp_buf); }
+| A LE A { emit_relational($1, "<=", $3); $$ = strdup(temp_buf); }
 
-| A GE A { emit_assignment($1, ">=", $3); $$ = strdup(temp_buf); }
+| A GE A { emit_relational($1, ">=", $3); $$ = strdup(temp_buf); }
 
-| A EQ A { emit_assignment($1, "==", $3); $$ = strdup(temp_buf); }
+| A EQ A { emit_relational($1, "==", $3); $$ = strdup(temp_buf); }
 
-| A NE A { emit_assignment($1, "!=", $3); $$ = strdup(temp_buf); }
+| A NE A { emit_relational($1, "!=", $3); $$ = strdup(temp_buf); }
 
 | A AND A { emit_assignment($1, "&&", $3); $$ = strdup(temp_buf); }
 
