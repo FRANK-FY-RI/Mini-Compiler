@@ -44,80 +44,33 @@ Assgn: ID '=' A ';' {
      }
     ;
 
-A: A '+' A {
-        emit_assignment($1, "+", $3); 
-        
-        $$ = strdup(temp_buf); 
-    }
+A: A '+' A { emit_assignment($1, "+", $3); $$ = strdup(temp_buf); }
 
- | A '-' A {
-        emit_assignment($1, "-", $3); 
-        
-        $$ = strdup(temp_buf); 
-    }
+ | A '-' A { emit_assignment($1, "-", $3); $$ = strdup(temp_buf); }
 
- | A '*' A { 
-        emit_assignment($1, "*", $3); 
-        
-        $$ = strdup(temp_buf); 
-    }
+ | A '*' A { emit_assignment($1, "*", $3); $$ = strdup(temp_buf); }
 
- | A '/' A {  
-        emit_assignment($1, "/", $3); 
+ | A '/' A { emit_assignment($1, "/", $3); $$ = strdup(temp_buf); }
 
-        $$ = strdup(temp_buf); 
-    }
+ | '(' A ')' { $$ = $2; }
 
- | '(' A ')' {
-        $$ = $2;
-    }
+| A GT A { emit_assignment($1, ">", $3); $$ = strdup(temp_buf); }
 
-| A GT A {
-        emit_assignment($1, ">", $3);
-        $$ = strdup(temp_buf);
-    }
+| A LT A { emit_assignment($1, "<", $3); $$ = strdup(temp_buf); }
 
-| A LT A {
-        emit_assignment($1, "<", $3);
-        $$ = strdup(temp_buf);
-    }
+| A LE A { emit_assignment($1, "<=", $3); $$ = strdup(temp_buf); }
 
-| A LE A {
-        emit_assignment($1, "<=", $3);
-        $$ = strdup(temp_buf);
-    }
+| A GE A { emit_assignment($1, ">=", $3); $$ = strdup(temp_buf); }
 
-| A GE A {
-        emit_assignment($1, ">=", $3);
-        $$ = strdup(temp_buf);
-    }
+| A EQ A { emit_assignment($1, "==", $3); $$ = strdup(temp_buf); }
 
-| A EQ A {
-        emit_assignment($1, "==", $3);
-        $$ = strdup(temp_buf);
-    }
+| A NE A { emit_assignment($1, "!=", $3); $$ = strdup(temp_buf); }
 
-| A NE A {
-        emit_assignment($1, "!=", $3);
-        $$ = strdup(temp_buf);
-    }
+| A AND A { emit_assignment($1, "&&", $3); $$ = strdup(temp_buf); }
 
-| A AND A {
-        emit_assignment($1, "&&", $3);
-        $$ = strdup(temp_buf);
-    }
+| A OR A { emit_assignment($1, "||", $3); $$ = strdup(temp_buf); }
 
-| A OR A {
-        emit_assignment($1, "||", $3);
-        $$ = strdup(temp_buf);
-    }
-
-| NOT A {
-        char *t = gentemp();
-        printf("%s: %s = !%s\n", genlabel(), t, $2);
-        free($2);
-        $$ = strdup(t);
-    }
+| NOT A { emit_assignment("", "!", $2); $$ = strdup(temp_buf); }
 
 
 | NUM {
@@ -136,7 +89,7 @@ A: A '+' A {
 %%
 
 void yyerror(char* s) {
-    printf("%s error at line number %d\n", s, yylineno);
+    printf("%s error at line number %d near %c\n", s, yylineno, (char)yychar);
 }
 
 int main() {
