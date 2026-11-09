@@ -46,13 +46,13 @@ Assgn: ID '=' A ';' {
 
 A: A '+' A { emit_assignment($1, "+", $3); $$ = strdup(temp_buf); }
 
- | A '-' A { emit_assignment($1, "-", $3); $$ = strdup(temp_buf); }
+| A '-' A { emit_assignment($1, "-", $3); $$ = strdup(temp_buf); }
 
- | A '*' A { emit_assignment($1, "*", $3); $$ = strdup(temp_buf); }
+| A '*' A { emit_assignment($1, "*", $3); $$ = strdup(temp_buf); }
 
- | A '/' A { emit_assignment($1, "/", $3); $$ = strdup(temp_buf); }
+| A '/' A { emit_assignment($1, "/", $3); $$ = strdup(temp_buf); }
 
- | '(' A ')' { $$ = $2; }
+| '(' A ')' { $$ = $2; }
 
 | A GT A { emit_assignment($1, ">", $3); $$ = strdup(temp_buf); }
 
