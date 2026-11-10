@@ -1,6 +1,7 @@
 #ifndef __SUPPORT_FUNC_H
 #define __SUPPORT_FUNC_H
 
+#include <cstdlib>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +18,7 @@ typedef struct {
     char code[MAX_INSTRSIZE];
 } Instruction;
 
-static Instruction TAC[MAX_INSTRUCTIONS];
+static Instruction TAC[MAX_INSTRUCTIONS + 1];
 
 static char* gentemp() {
     sprintf(temp_buf, "t%d", temp); 
@@ -29,6 +30,10 @@ static char* gentemp() {
 
 
 int emit(char* instruction) {
+    if(nextinstr > MAX_INSTRUCTIONS) {
+        printf("emit buffer full\n");
+        exit(EXIT_FAILURE);
+    }
     TAC[nextinstr].label = nextinstr;
     strcpy(TAC[nextinstr].code, instruction);
     return nextinstr++;
