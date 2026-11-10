@@ -36,17 +36,16 @@ S: S Assgn {}
  ;
 
 Assgn: ID '=' A ';' {
-        char *newlabel = genlabel(); 
-
-        printf("%s: %s = %s\n",
-        newlabel, $1, $3);
+        char instruction[MAX_INSTRSIZE];
+        snprintf(instruction, MAX_INSTRSIZE, "%s = %s\n",
+        $1, $3);
         free($1);
         free($3);
-        printf("\n---------------------\n");
-        
-        free(newlabel);
+
+        print_TAC();
+        printf("\n---------------------\n");    
      }
-    ;
+;
 
 A: A '+' A { emit_assignment($1, "+", $3); $$ = strdup(temp_buf); }
 

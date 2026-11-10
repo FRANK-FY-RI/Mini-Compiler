@@ -8,15 +8,18 @@
 static int label = 1, temp = 1;
 static char label_buf[32], temp_buf[32];
 
-char* genlabel() {
-    sprintf(label_buf, "%d", label); 
-    char* newlabel = (char*)malloc(strlen(label_buf) + 1);
-    strcpy(newlabel, label_buf);
-    label++;
-    return newlabel;
-}
+#define MAX_INSTRUCTIONS 1000
+#define MAX_INSTRSIZE 256
+static int nextinstr = 1;
 
-char* gentemp() {
+typedef struct {
+    int label;
+    char code[MAX_INSTRSIZE];
+} Instruction;
+
+static Instruction TAC[MAX_INSTRUCTIONS];
+
+static char* gentemp() {
     sprintf(temp_buf, "t%d", temp); 
     char* newtemp = (char*)malloc(strlen(temp_buf) + 1);
     strcpy(newtemp, temp_buf);
@@ -25,38 +28,48 @@ char* gentemp() {
 }
 
 
-void emit_assignment(char* opr1, char* op, char* opr2) {
-    char *newlabel = genlabel(), *newtemp = gentemp();
-
-    printf("%s: %s = %s %s %s\n",
-    newlabel, newtemp, opr1, op, opr2);
-
-    free(newlabel);
-    free(newtemp);
-
-    if(strlen(opr1) > 0) free(opr1);
-    if(strlen(opr2) > 0) free(opr2);
+int emit(char* instruction) {
+    TAC[nextinstr].label = nextinstr;
+    strcpy(TAC[nextinstr].code, instruction);
+    return nextinstr++;
 }
 
 
-void emit_relational(char* lhs, char* relop, char* rhs) {
-    char *start_label = genlabel(), *else_body = genlabel(),
-         *else_goto = genlabel(), *true_body = genlabel(),
-         *after = genlabel();
-    label--;
+void print_TAC() {
+    for(int i = 1; i<nextinstr; i++) {
+        printf("%d: %s\n", TAC[i].label, TAC[i].code);
+    }
+}
+
+
+void emit_assignment(char* opr1, char* op, char* opr2) {
+    char *newtemp = gentemp();
+    char instruction[MAX_INSTRSIZE];
+
+    snprintf(instruction, sizeof(instruction),
+             "%s = %s %s %s", newtemp, opr1, op, opr2);
+
+    emit(instruction);
+
+    free(newtemp);
+    free(opr1);
+    free(opr2);
+}
+
+static void emit_relational(char* lhs, char* relop, char* rhs) { 
     char *tempvar = gentemp();
+    char instruction[MAX_INSTRSIZE];
 
-    printf("%s: if %s %s %s goto %s\n",
-    start_label, lhs, relop, rhs, true_body);
-    printf("%s: %s = 0\n", else_body, tempvar);
-    printf("%s: goto %s\n", else_goto, after);
-    printf("%s: %s = 1\n", true_body, tempvar);
-
-    free(start_label);
-    free(else_body);
-    free(else_goto);
-    free(true_body);
-    free(after);
+    snprintf(instruction, MAX_INSTRSIZE, "if %s %s %s goto %s",
+    lhs, relop, rhs, "___");
+    emit(instruction);
+    snprintf(instruction, MAX_INSTRSIZE, "%s = 0", tempvar);
+    emit(instruction);
+    snprintf(instruction, MAX_INSTRSIZE, "goto %s", "___");
+    emit(instruction);
+    snprintf(instruction, MAX_INSTRSIZE, "%s = 1", tempvar);
+    emit(instruction);
+ 
     free(tempvar);
 
     if(strlen(lhs) > 0) free(lhs);
