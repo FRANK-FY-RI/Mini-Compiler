@@ -20,14 +20,12 @@ extern char* yytext;
 
 %type <expr> A E B 
 %type <instr> M
-%token <name> ID
+%token <name> ID RELOP
 %token <val> NUM
 %token TRUE FALSE
 
 %left OR
 %left AND
-%left EQ NE
-%left LT GT LE GE
 %left '+' '-'
 %left '*' '/'
 %right NOT
@@ -122,39 +120,9 @@ E: E '+' E
 | ID { $$ = create_expr($1, NULL, NULL); }
 ;
 
-B: E GT E
+B: E RELOP E
     {
-        $$ = emit_relational($1->place, ">", $3->place); 
-        free($1); free($3);
-    }
-
-| E LT E 
-    {
-        $$ = emit_relational($1->place, "<", $3->place);
-        free($1); free($3);
-    }
-
-| E LE E 
-    {
-        $$ = emit_relational($1->place, "<=", $3->place);
-        free($1); free($3);
-    }
-
-| E GE E 
-    {
-        $$ = emit_relational($1->place, ">=", $3->place);
-        free($1); free($3);
-    }
-
-| E EQ E 
-    {
-        $$ = emit_relational($1->place, "==", $3->place);
-        free($1); free($3);
-    }
-
-| E NE E 
-    {
-        $$ = emit_relational($1->place, "!=", $3->place);
+        $$ = emit_relational($1->place, $2, $3->place); 
         free($1); free($3);
     }
 

@@ -23,14 +23,9 @@ identifier {letter}({letter}|{digit})*
 "=" { return '=';}
 "(" { return '(';}
 ")" { return ')';}
-">" { return GT;}
-">=" { return GE;}
-"<" { return LT;}
-"<=" { return LE;}
-"==" { return EQ;}
+"<"|">"|"<="|">="|"=="|"!=" { yylval.name = strdup(yytext); return RELOP;}
 "||" { return OR;}
 "&&" { return AND;}
-"!=" { return NE;}
 "true" { return TRUE;}
 "false" {return FALSE;}
 {digit}+ { yylval.val = atoi(yytext); return NUM;}
