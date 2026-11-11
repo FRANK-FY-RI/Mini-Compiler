@@ -1,7 +1,6 @@
 #ifndef __SUPPORT_FUNC_H
 #define __SUPPORT_FUNC_H
 
-#include <cstdlib>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,18 +17,25 @@ typedef struct {
     char code[MAX_INSTRSIZE];
 } Instruction;
 
+typedef struct ListNode {
+    int label;
+    struct ListNode* next;
+} ListNode;
+
+typedef struct ExprAttr {
+    char *place;
+    ListNode *truelist, *falselist;
+} ExprAttr;
+
 static Instruction TAC[MAX_INSTRUCTIONS + 1];
 
 static char* gentemp() {
-    sprintf(temp_buf, "t%d", temp); 
-    char* newtemp = (char*)malloc(strlen(temp_buf) + 1);
-    strcpy(newtemp, temp_buf);
-    temp++;
-    return newtemp;
+    sprintf(temp_buf, "t%d", temp++);  
+    return strdup(temp_buf);
 }
 
 
-int emit(char* instruction) {
+static int emit(char* instruction) {
     if(nextinstr > MAX_INSTRUCTIONS) {
         printf("emit buffer full\n");
         exit(EXIT_FAILURE);
@@ -40,14 +46,57 @@ int emit(char* instruction) {
 }
 
 
-void print_TAC() {
+static ListNode* makelist(int index) {
+    ListNode *head = (ListNode*)malloc(sizeof(ListNode));
+    head->label = index;
+    head->next = NULL;
+    return head;
+}
+
+
+static ListNode* mergelist(ListNode *l1, ListNode *l2) {
+    if(!l1) return l2;
+    if(!l2) return l1;
+    ListNode *temp = l1;
+    while(temp->next != NULL) {
+        temp = temp->next;
+    }
+    temp->next = l2;
+    return l1;
+}
+
+
+static void backpatch(ListNode *l, int index) {
+    ListNode *temp = l;
+    while(temp != NULL) {
+        char *q = strchr(TAC[temp->label].code, '?'); 
+        if(q != NULL) {
+            sprintf(q, "%d", index);
+        }
+        ListNode *curr = temp;
+        temp = temp->next;
+        free(curr);
+    }
+}
+
+
+static void print_TAC() {
     for(int i = 1; i<nextinstr; i++) {
         printf("%d: %s\n", TAC[i].label, TAC[i].code);
     }
 }
 
 
-void emit_assignment(char* opr1, char* op, char* opr2) {
+static ExprAttr* create_expr(char* place, ListNode *tl, ListNode *fl) {
+    ExprAttr *expr = (ExprAttr*)malloc(sizeof(ExprAttr));
+    expr->place = place;
+    expr->truelist = tl;
+    expr->falselist = fl;
+    return expr;
+}
+
+
+static void emit_assignment(char* opr1, char* op, char* opr2) {
     char *newtemp = gentemp();
     char instruction[MAX_INSTRSIZE];
 
@@ -57,28 +106,26 @@ void emit_assignment(char* opr1, char* op, char* opr2) {
     emit(instruction);
 
     free(newtemp);
-    free(opr1);
-    free(opr2);
+    if(opr1) free(opr1);
+    if(opr2) free(opr2);
 }
 
-static void emit_relational(char* lhs, char* relop, char* rhs) { 
-    char *tempvar = gentemp();
+static ExprAttr* emit_relational(char* lhs, char* relop, char* rhs) { 
     char instruction[MAX_INSTRSIZE];
 
+    int true_label = nextinstr;
     snprintf(instruction, MAX_INSTRSIZE, "if %s %s %s goto %s",
-    lhs, relop, rhs, "___");
-    emit(instruction);
-    snprintf(instruction, MAX_INSTRSIZE, "%s = 0", tempvar);
-    emit(instruction);
-    snprintf(instruction, MAX_INSTRSIZE, "goto %s", "___");
-    emit(instruction);
-    snprintf(instruction, MAX_INSTRSIZE, "%s = 1", tempvar);
-    emit(instruction);
- 
-    free(tempvar);
+    lhs, relop, rhs, "?");
+    emit(instruction); 
+    int false_label = nextinstr;
+    snprintf(instruction, MAX_INSTRSIZE, "goto %s", "?");
+    emit(instruction); 
 
-    if(strlen(lhs) > 0) free(lhs);
-    if(strlen(rhs) > 0) free(rhs);
+    if(lhs) free(lhs);
+    if(rhs) free(rhs);
+
+    return create_expr(NULL, makelist(true_label), makelist(false_label));
+ 
 }
 
 

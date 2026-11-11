@@ -14,9 +14,12 @@ extern char* yytext;
 %union {
     char* name;
     float val;
+    int instr;
+    struct ExprAttr* expr;
 }
 
-%type <name> A 
+%type <expr> A 
+%type <instr> M
 %token <name> ID
 %token <val> NUM
 %token TRUE FALSE
@@ -33,12 +36,41 @@ extern char* yytext;
 
 S: S Assgn {} 
 | Assgn {}
- ;
+;
+
+M: { $$ = nextinstr;}
+;
 
 Assgn: ID '=' A ';' {
         char instruction[MAX_INSTRSIZE];
-        snprintf(instruction, MAX_INSTRSIZE, "%s = %s\n",
-        $1, $3);
+
+        if ($3->truelist != NULL || $3->falselist != NULL) {
+            char *tempvar = gentemp();
+
+            int false_label = nextinstr;
+            snprintf(instruction, MAX_INSTRSIZE, "%s = 0", tempvar);
+            emit(instruction);
+
+            int goto_end = nextinstr;
+            emit("goto ?");
+
+            int true_label = nextinstr;
+            snprintf(instruction, MAX_INSTRSIZE, "%s = 1", tempvar);
+            emit(instruction);
+
+            backpatch($3->truelist, true_label);
+            backpatch($3->falselist, false_label);
+            backpatch(makelist(goto_end), nextinstr);
+
+            snprintf(instruction, MAX_INSTRSIZE, "%s = %s", $1, tempvar);
+            emit(instruction);
+            free(tempvar);
+        } else {
+            snprintf(instruction, MAX_INSTRSIZE, "%s = %s", $1, $3->place);
+            emit(instruction);
+            if ($3->place) free($3->place);
+        }
+
         free($1);
         free($3);
 
@@ -47,46 +79,104 @@ Assgn: ID '=' A ';' {
      }
 ;
 
-A: A '+' A { emit_assignment($1, "+", $3); $$ = strdup(temp_buf); }
+A: A '+' A
+    {
+        emit_assignment($1->place, "+", $3->place);
+        $$ = create_expr(strdup(temp_buf), NULL, NULL);
+        free($1); free($3);
+    }
 
-| A '-' A { emit_assignment($1, "-", $3); $$ = strdup(temp_buf); }
+| A '-' A
+    {
+        emit_assignment($1->place, "-", $3->place);
+        $$ = create_expr(strdup(temp_buf), NULL, NULL);
+        free($1); free($3);
+    }
 
-| A '*' A { emit_assignment($1, "*", $3); $$ = strdup(temp_buf); }
+| A '*' A
+    {
+        emit_assignment($1->place, "*", $3->place);
+        $$ = create_expr(strdup(temp_buf), NULL, NULL);
+        free($1); free($3);
+    }
 
-| A '/' A { emit_assignment($1, "/", $3); $$ = strdup(temp_buf); }
+| A '/' A
+    {
+        emit_assignment($1->place, "/", $3->place);
+        $$ = create_expr(strdup(temp_buf), NULL, NULL);
+        free($1); free($3);
+    }
 
-| '(' A ')' { $$ = $2; }
+| '(' A ')' { $$= $2; }
 
-| A GT A { emit_relational($1, ">", $3); $$ = strdup(temp_buf); }
+| A GT A
+    {
+        $$ = emit_relational($1->place, ">", $3->place); 
+        free($1); free($3);
+    }
 
-| A LT A { emit_relational($1, "<", $3); $$ = strdup(temp_buf); }
+| A LT A 
+    {
+        $$ = emit_relational($1->place, "<", $3->place);
+        free($1); free($3);
+    }
 
-| A LE A { emit_relational($1, "<=", $3); $$ = strdup(temp_buf); }
+| A LE A 
+    {
+        $$ = emit_relational($1->place, "<=", $3->place);
+        free($1); free($3);
+    }
 
-| A GE A { emit_relational($1, ">=", $3); $$ = strdup(temp_buf); }
+| A GE A 
+    {
+        $$ = emit_relational($1->place, ">=", $3->place);
+        free($1); free($3);
+    }
 
-| A EQ A { emit_relational($1, "==", $3); $$ = strdup(temp_buf); }
+| A EQ A 
+    {
+        $$ = emit_relational($1->place, "==", $3->place);
+        free($1); free($3);
+    }
 
-| A NE A { emit_relational($1, "!=", $3); $$ = strdup(temp_buf); }
+| A NE A 
+    {
+        $$ = emit_relational($1->place, "!=", $3->place);
+        free($1); free($3);
+    }
 
-| A AND A { emit_assignment($1, "&&", $3); $$ = strdup(temp_buf); }
+| A AND M A
+    {
+        backpatch($1->truelist, $3);
+        $$ = create_expr(NULL, $4->truelist, mergelist($1->falselist, $4->falselist));
+        free($1); free($4);
+    }
 
-| A OR A { emit_assignment($1, "||", $3); $$ = strdup(temp_buf); }
+| A OR M A 
+    {
+        backpatch($1->falselist, $3);
+        $$ = create_expr(NULL, mergelist($1->truelist, $4->truelist), $4->falselist);
+        free($1); free($4);
+    }
 
-| NOT A { emit_assignment("", "!", $2); $$ = strdup(temp_buf); }
+| NOT A 
+    {
+        $$ = create_expr(NULL, $2->falselist, $2->truelist);
+        free($2);
+    }
 
 
 | NUM {
         char buffer[32];
         snprintf(buffer, sizeof(buffer), "%g", $1);
-        $$ = strdup(buffer);
+        $$ = create_expr(strdup(buffer), NULL, NULL);
     }
 
-| ID { $$ = $1; }
+| ID { $$ = create_expr($1, NULL, NULL); }
 
-| TRUE { $$ = strdup("1"); }
+| TRUE  { int idx = nextinstr; emit("goto ?"); $$ = create_expr(NULL, makelist(idx), NULL); }
 
-| FALSE { $$ = strdup("0"); }
+| FALSE { int idx = nextinstr; emit("goto ?"); $$ = create_expr(NULL, NULL, makelist(idx)); }
 ;
 
 %%

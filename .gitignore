@@ -2,3 +2,4 @@ compile.sh
 *.yy.*
 *.tab*
 parser
+build/
