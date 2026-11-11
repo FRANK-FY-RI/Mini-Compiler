@@ -18,7 +18,7 @@ extern char* yytext;
     struct ExprAttr* expr;
 }
 
-%type <expr> A 
+%type <expr> A E B 
 %type <instr> M
 %token <name> ID
 %token <val> NUM
@@ -79,92 +79,39 @@ Assgn: ID '=' A ';' {
      }
 ;
 
-A: A '+' A
+A: E {}
+| B {}
+;
+
+E: E '+' E
     {
         emit_assignment($1->place, "+", $3->place);
         $$ = create_expr(strdup(temp_buf), NULL, NULL);
         free($1); free($3);
     }
 
-| A '-' A
+| E '-' E
     {
         emit_assignment($1->place, "-", $3->place);
         $$ = create_expr(strdup(temp_buf), NULL, NULL);
         free($1); free($3);
     }
 
-| A '*' A
+| E '*' E
     {
         emit_assignment($1->place, "*", $3->place);
         $$ = create_expr(strdup(temp_buf), NULL, NULL);
         free($1); free($3);
     }
 
-| A '/' A
+| E '/' E
     {
         emit_assignment($1->place, "/", $3->place);
         $$ = create_expr(strdup(temp_buf), NULL, NULL);
         free($1); free($3);
     }
 
-| '(' A ')' { $$= $2; }
-
-| A GT A
-    {
-        $$ = emit_relational($1->place, ">", $3->place); 
-        free($1); free($3);
-    }
-
-| A LT A 
-    {
-        $$ = emit_relational($1->place, "<", $3->place);
-        free($1); free($3);
-    }
-
-| A LE A 
-    {
-        $$ = emit_relational($1->place, "<=", $3->place);
-        free($1); free($3);
-    }
-
-| A GE A 
-    {
-        $$ = emit_relational($1->place, ">=", $3->place);
-        free($1); free($3);
-    }
-
-| A EQ A 
-    {
-        $$ = emit_relational($1->place, "==", $3->place);
-        free($1); free($3);
-    }
-
-| A NE A 
-    {
-        $$ = emit_relational($1->place, "!=", $3->place);
-        free($1); free($3);
-    }
-
-| A AND M A
-    {
-        backpatch($1->truelist, $3);
-        $$ = create_expr(NULL, $4->truelist, mergelist($1->falselist, $4->falselist));
-        free($1); free($4);
-    }
-
-| A OR M A 
-    {
-        backpatch($1->falselist, $3);
-        $$ = create_expr(NULL, mergelist($1->truelist, $4->truelist), $4->falselist);
-        free($1); free($4);
-    }
-
-| NOT A 
-    {
-        $$ = create_expr(NULL, $2->falselist, $2->truelist);
-        free($2);
-    }
-
+| '(' E ')' { $$= $2; }
 
 | NUM {
         char buffer[32];
@@ -173,6 +120,65 @@ A: A '+' A
     }
 
 | ID { $$ = create_expr($1, NULL, NULL); }
+;
+
+B: E GT E
+    {
+        $$ = emit_relational($1->place, ">", $3->place); 
+        free($1); free($3);
+    }
+
+| E LT E 
+    {
+        $$ = emit_relational($1->place, "<", $3->place);
+        free($1); free($3);
+    }
+
+| E LE E 
+    {
+        $$ = emit_relational($1->place, "<=", $3->place);
+        free($1); free($3);
+    }
+
+| E GE E 
+    {
+        $$ = emit_relational($1->place, ">=", $3->place);
+        free($1); free($3);
+    }
+
+| E EQ E 
+    {
+        $$ = emit_relational($1->place, "==", $3->place);
+        free($1); free($3);
+    }
+
+| E NE E 
+    {
+        $$ = emit_relational($1->place, "!=", $3->place);
+        free($1); free($3);
+    }
+
+| B AND M B
+    {
+        backpatch($1->truelist, $3);
+        $$ = create_expr(NULL, $4->truelist, mergelist($1->falselist, $4->falselist));
+        free($1); free($4);
+    }
+
+| B OR M B 
+    {
+        backpatch($1->falselist, $3);
+        $$ = create_expr(NULL, mergelist($1->truelist, $4->truelist), $4->falselist);
+        free($1); free($4);
+    }
+
+| NOT B 
+    {
+        $$ = create_expr(NULL, $2->falselist, $2->truelist);
+        free($2);
+    }
+
+
 
 | TRUE  { int idx = nextinstr; emit("goto ?"); $$ = create_expr(NULL, makelist(idx), NULL); }
 
